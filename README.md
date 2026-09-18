@@ -1,39 +1,36 @@
-# Generador de Asignación de Camioneta
+# Asignación de Camioneta
 
-Formulario web para generar el documento de "Asignación de camioneta por supervisor" (Geotek/GBB). Se completa el formulario de la izquierda y la vista previa de la derecha se actualiza al instante, lista para descargar como PDF o imprimir.
+Aplicación web para registrar la entrega y asignación de vehículos de Geotec Boyles Bros.
 
-## Estructura del proyecto
+## Estructura
 
+```text
+/
+├── index.html
+├── README.md
+└── assets/
+    ├── styles.css
+    ├── script.js
+    └── logo.png
 ```
-.
-├── index.html          # Estructura de la página (formulario + vista previa)
-├── assets/
-│   ├── styles.css       # Estilos de la aplicación
-│   ├── script.js        # Lógica: estado del formulario, vista previa y generación de PDF
-│   └── logo.png          # Logo de Geotec Boyles Bros usado en el documento
-└── README.md
-```
 
-## Uso
+## Publicar en GitHub Pages
 
-Abre `index.html` en el navegador (no requiere servidor ni build). También puedes publicarlo gratis con GitHub Pages:
+1. Sube `index.html`, `README.md` y la carpeta `assets` a la raíz del repositorio.
+2. Coloca el logo institucional en `assets/logo.png`.
+3. En GitHub abre **Settings → Pages**.
+4. Selecciona **Deploy from a branch**, rama `main` y carpeta `/ (root)`.
+5. Guarda y espera la publicación del enlace.
 
-1. Sube este repositorio a GitHub.
-2. En **Settings → Pages**, elige la rama `main` y la carpeta `/ (root)`.
-3. GitHub te entrega una URL pública (`https://<usuario>.github.io/<repositorio>/`).
+## Funciones
 
-## Funcionalidad
+- Diseño adaptable a computador y celular.
+- Vista previa en tamaño carta.
+- Generación de PDF con `html2canvas` y `jsPDF`.
+- Impresión desde el navegador.
+- Guardado automático local.
+- Formato de patente y RUT chileno.
+- Validación del dígito verificador del RUT.
+- Registro de una o más personas.
 
-- **Datos del documento**: fecha, modelo de camioneta, patente (PPU) y número interno.
-- **Reciben conforme**: lista de personas (nombre, cargo, RUT), se pueden agregar o quitar filas.
-- **Descargar PDF**: genera un PDF con el mismo diseño del documento original usando `html2canvas` + `jsPDF` (cargados desde CDN).
-- **Imprimir**: abre el diálogo de impresión del navegador con estilos optimizados para carta (`@media print`).
-- **Restablecer campos**: vuelve el formulario a sus valores por defecto.
-- Los datos del formulario se guardan en `localStorage` del navegador para no perderlos al recargar la página.
-
-## Dependencias externas (vía CDN)
-
-- [html2canvas](https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js)
-- [jsPDF](https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js)
-
-No requiere instalación de paquetes ni proceso de build.
+> La generación de PDF requiere conexión a internet para cargar las librerías externas.
