@@ -1,0 +1,301 @@
+(function(){
+  var STORAGE_KEY = 'geotec-asignacion-camioneta-v1';
+
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  var fechaInput = document.getElementById('fecha');
+  var modeloInput = document.getElementById('modelo');
+  var patenteInput = document.getElementById('patente');
+  var internoInput = document.getElementById('interno');
+  var peopleList = document.getElementById('people-list');
+  var addRowBtn = document.getElementById('add-row-btn');
+  var downloadBtn = document.getElementById('download-btn');
+  var printBtn = document.getElementById('print-btn');
+  var resetBtn = document.getElementById('reset-btn');
+  var statusHint = document.getElementById('status-hint');
+  var defaultHintText = statusHint.textContent;
+
+  var prevFecha = document.getElementById('prev-fecha');
+  var prevModelo = document.getElementById('prev-modelo');
+  var prevPatente = document.getElementById('prev-patente');
+  var prevInterno = document.getElementById('prev-interno');
+  var prevTableBody = document.getElementById('prev-table-body');
+
+  function todayISO(){
+    var d = new Date();
+    var m = String(d.getMonth()+1).padStart(2,'0');
+    var day = String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+m+'-'+day;
+  }
+
+  function escapeHtml(str){
+    return (str||'').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function defaultState(){
+    return {
+      fecha: todayISO(),
+      modelo: 'HILUX 2.4 DEX',
+      patente: '',
+      interno: '',
+      people: [
+        {nombre:'', cargo:'Supervisor', rut:''}
+      ]
+    };
+  }
+
+  var state = defaultState();
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && typeof parsed === 'object'){
+          state = Object.assign(defaultState(), parsed);
+          if(!Array.isArray(state.people) || state.people.length === 0){
+            state.people = defaultState().people;
+          }
+        }
+      }
+    }catch(e){
+      // localStorage not available or corrupted data - continue with defaults
+    }
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      // storage unavailable - fail silently, app still works in-memory
+    }
+  }
+
+  function formatFecha(iso){
+    if(!iso) return '';
+    var parts = iso.split('-');
+    if(parts.length !== 3) return '';
+    var y = parseInt(parts[0],10);
+    var mo = parseInt(parts[1],10) - 1;
+    var d = parseInt(parts[2],10);
+    if(isNaN(y) || isNaN(mo) || isNaN(d) || !MESES[mo]) return '';
+    return d + ' de ' + MESES[mo] + ' del ' + y;
+  }
+
+  function renderFormPeople(){
+    peopleList.innerHTML = '';
+    state.people.forEach(function(person, idx){
+      var row = document.createElement('div');
+      row.className = 'person-row';
+
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-btn';
+      removeBtn.title = 'Quitar';
+      removeBtn.setAttribute('aria-label', 'Quitar persona ' + (idx+1));
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', function(){
+        state.people.splice(idx, 1);
+        if(state.people.length === 0){
+          state.people.push({nombre:'', cargo:'Supervisor', rut:''});
+        }
+        saveState();
+        renderFormPeople();
+        renderPreview();
+      });
+      if(state.people.length > 1){
+        row.appendChild(removeBtn);
+      }
+
+      var nombreLabel = document.createElement('label');
+      nombreLabel.textContent = 'Nombre';
+      var nombreInput = document.createElement('input');
+      nombreInput.type = 'text';
+      nombreInput.placeholder = 'Ej: Hidalgo Rojas Williams Alejandro';
+      nombreInput.value = person.nombre || '';
+      nombreInput.addEventListener('input', function(){
+        state.people[idx].nombre = nombreInput.value;
+        saveState();
+        renderPreview();
+      });
+
+      var rowFields = document.createElement('div');
+      rowFields.className = 'row-2';
+
+      var cargoWrap = document.createElement('div');
+      var cargoLabel = document.createElement('label');
+      cargoLabel.textContent = 'Cargo';
+      var cargoInput = document.createElement('input');
+      cargoInput.type = 'text';
+      cargoInput.placeholder = 'Supervisor';
+      cargoInput.value = person.cargo || '';
+      cargoInput.addEventListener('input', function(){
+        state.people[idx].cargo = cargoInput.value;
+        saveState();
+        renderPreview();
+      });
+      cargoWrap.appendChild(cargoLabel);
+      cargoWrap.appendChild(cargoInput);
+
+      var rutWrap = document.createElement('div');
+      var rutLabel = document.createElement('label');
+      rutLabel.textContent = 'RUT';
+      var rutInput = document.createElement('input');
+      rutInput.type = 'text';
+      rutInput.placeholder = 'Ej: 18.575.045-0';
+      rutInput.value = person.rut || '';
+      rutInput.addEventListener('input', function(){
+        state.people[idx].rut = rutInput.value;
+        saveState();
+        renderPreview();
+      });
+      rutWrap.appendChild(rutLabel);
+      rutWrap.appendChild(rutInput);
+
+      rowFields.appendChild(cargoWrap);
+      rowFields.appendChild(rutWrap);
+
+      row.appendChild(nombreLabel);
+      row.appendChild(nombreInput);
+      row.appendChild(rowFields);
+
+      peopleList.appendChild(row);
+    });
+  }
+
+  function renderPreview(){
+    prevFecha.textContent = formatFecha(state.fecha) || ' ';
+    prevModelo.textContent = state.modelo || '—';
+    prevPatente.textContent = state.patente || '—';
+    prevInterno.textContent = state.interno || '—';
+
+    prevTableBody.innerHTML = '';
+    state.people.forEach(function(person){
+      if(!person.nombre && !person.cargo && !person.rut) return;
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="nombre">' + (escapeHtml(person.nombre) || '&nbsp;') + '</td>' +
+        '<td class="cargo">' + (escapeHtml(person.cargo) || '&nbsp;') + '</td>' +
+        '<td class="rut">' + (escapeHtml(person.rut) || '&nbsp;') + '</td>' +
+        '<td class="firma">&nbsp;</td>';
+      prevTableBody.appendChild(tr);
+    });
+    if(prevTableBody.children.length === 0){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td class="nombre">&nbsp;</td><td class="cargo">&nbsp;</td><td class="rut">&nbsp;</td><td class="firma">&nbsp;</td>';
+      prevTableBody.appendChild(tr);
+    }
+  }
+
+  function bindTopFields(){
+    fechaInput.value = state.fecha;
+    modeloInput.value = state.modelo;
+    patenteInput.value = state.patente;
+    internoInput.value = state.interno;
+
+    fechaInput.addEventListener('input', function(){ state.fecha = fechaInput.value; saveState(); renderPreview(); });
+    modeloInput.addEventListener('input', function(){ state.modelo = modeloInput.value; saveState(); renderPreview(); });
+    patenteInput.addEventListener('input', function(){ state.patente = patenteInput.value; saveState(); renderPreview(); });
+    internoInput.addEventListener('input', function(){ state.interno = internoInput.value; saveState(); renderPreview(); });
+  }
+
+  addRowBtn.addEventListener('click', function(){
+    state.people.push({nombre:'', cargo:'Supervisor', rut:''});
+    saveState();
+    renderFormPeople();
+    renderPreview();
+  });
+
+  printBtn.addEventListener('click', function(){
+    window.print();
+  });
+
+  function buildFilename(){
+    var parts = ['Asignacion_camioneta'];
+    if(state.patente) parts.push(state.patente.replace(/\s+/g,''));
+    if(state.interno) parts.push(state.interno.replace(/\s+/g,''));
+    return parts.join('_') + '.pdf';
+  }
+
+  function setHint(msg, isError){
+    statusHint.textContent = msg;
+    statusHint.style.color = isError ? '#b3261e' : '#6b7280';
+  }
+
+  function resetHintSoon(){
+    setTimeout(function(){ setHint(defaultHintText, false); }, 4000);
+  }
+
+  async function generatePdfBlob(){
+    var pageEl = document.getElementById('page');
+    var canvas = await html2canvas(pageEl, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+    var imgData = canvas.toDataURL('image/jpeg', 0.95);
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({unit:'pt', format:'letter'});
+    var pageWidth = pdf.internal.pageSize.getWidth();
+    var pageHeight = pdf.internal.pageSize.getHeight();
+    var imgWidth = pageWidth;
+    var imgHeight = canvas.height * (imgWidth / canvas.width);
+    var heightLeft = imgHeight;
+    var position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    return pdf.output('blob');
+  }
+
+  downloadBtn.addEventListener('click', async function(){
+    downloadBtn.disabled = true;
+    var originalLabel = downloadBtn.textContent;
+    downloadBtn.textContent = 'Generando PDF...';
+    setHint('Generando el PDF...', false);
+    try{
+      var blob = await generatePdfBlob();
+      var filename = buildFilename();
+      var downloads = (window.claude && typeof window.claude.use === 'function')
+        ? await window.claude.use('downloads')
+        : null;
+      if(downloads){
+        var result = await downloads.save({filename: filename, data: blob});
+        setHint(result && result.status === 'delivered' ? 'PDF enviado.' : 'PDF guardado correctamente.', false);
+      } else {
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setHint('El PDF se abrió en una pestaña nueva; guárdalo desde ahí.', false);
+      }
+    }catch(err){
+      if(err && err.code === 'declined'){
+        setHint('Descarga cancelada.', false);
+      } else if(err && err.code === 'rate_limited'){
+        setHint('Espera un momento e inténtalo de nuevo.', true);
+      } else {
+        setHint('No se pudo generar el PDF. Prueba con "Imprimir".', true);
+      }
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = originalLabel;
+      resetHintSoon();
+    }
+  });
+
+  resetBtn.addEventListener('click', function(){
+    if(!confirm('¿Restablecer todos los campos a su estado inicial?')) return;
+    state = defaultState();
+    saveState();
+    bindTopFields();
+    renderFormPeople();
+    renderPreview();
+  });
+
+  loadState();
+  bindTopFields();
+  renderFormPeople();
+  renderPreview();
+})();
