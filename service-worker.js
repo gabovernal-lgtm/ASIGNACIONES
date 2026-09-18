@@ -1,5 +1,5 @@
 const CACHE = 'asignaciones-geotec-v1';
-const LOCAL = ['./', './index.html', './styles.css', './script.js', './logo.png', './firma.png', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
+const LOCAL = ['./', './index.html', './styles.css', './script.js', './logo.png', './firma.png', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(LOCAL)));
